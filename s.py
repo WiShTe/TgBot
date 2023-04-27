@@ -2,13 +2,13 @@ import telebot
 from telebot import types
 import pandas as pd
 import os
+import json
 import random
 
 bot = telebot.TeleBot('5732294625:AAHgq4u9sJSlLT9E1j4VL5kfWyLIKcO6jkI')
 books_df = pd.read_csv('books.csv', sep=',', encoding="utf-8")
 keyboard = telebot.types.ReplyKeyboardMarkup(True)
 keyboard.row("/help", "/recommend")
-
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -35,6 +35,19 @@ def get_random_book():
     return f"{random_book.iloc[0]['title']} by {random_book.iloc[0]['authors']}"
 
 
+def add_book(update, context):
+    user = update.message.from_user.username
+    book = context.args[0]
+    with open('books_read.json', 'r') as read_book_file:
+        books_read = json.load(read_book_file)
+    if user in books_read:
+        books_read[user]['books'].append(book)
+    else:
+        books_read[user] = {'books': [book]}
+    with open('books_read.json', 'w') as read_book_file:
+        json.dump(books_read, read_book_file)
+
+    update.message.reply_text(f"Книга {book} добавлена в ваш список прочитанных книг")
 @bot.message_handler(content_types=['text'])
 def func(message):
     def send_random_toad_pic():
@@ -48,15 +61,6 @@ def func(message):
     else:
         bot.send_message(message.chat.id, text="На такую комманду я не запрограммирован, я могу порекомендовать тебе "
                                                "книгу, или отправить крутое фото лягушки")
-
-
-@bot.message_handler(commands=['recommendations'])
-def recommendations(message):
-    keyboardd = types.InlineKeyboardMarkup()
-    url_btn = types.InlineKeyboardButton(text="Как мне быстрее читать?",
-                                         url="https://blog.mann-ivanov-ferber.ru/2021/02/14/uskoryaemsya-4-sposoba-chitat-bystree-i-ne-teryat-smysl")
-    keyboardd.add(url_btn)
-    bot.send_message(message.chat.id, "вот как", reply_markup=keyboardd)
 
 
 bot.polling(none_stop=True)
